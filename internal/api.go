@@ -236,6 +236,6 @@ func StreamClient(req types.ChatArgs) (string, error) {
 		// }
 	}
 	finalResult := strings.Join(result, "")
-	fmt.Print(finalResult)
+
 	return finalResult, nil
 }
