@@ -6,3 +6,4 @@ require github.com/joho/godotenv v1.5.1
 
 retract v0.0.1
 retract v1.0.0
+retract v1.1.0
