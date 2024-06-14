@@ -185,12 +185,7 @@ func StreamClient(req types.ChatArgs) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("error reading response body: %w", err)
 		}
-
-		// Convert the response body to a string
-		bodyString := string(bodyBytes)
-
-		// Print the response body
-		fmt.Println(bodyString)
+		return string(bodyBytes), nil
 	}
 	// Check if the response status indicates an error
 	if resp.StatusCode >= 400 {
@@ -223,19 +218,90 @@ func StreamClient(req types.ChatArgs) (string, error) {
 			if err := json.Unmarshal(data, &chunk); err != nil {
 				return "", err
 			}
-			// fmt.Printf("%v",chunk.Choices[0].Delta.Content)
+		
 			result = append(result, chunk.Choices[0].Delta.Content)
 		}
-
-		// else if bytes.HasPrefix(line, []byte(`event: error)`)) {
-		// 	data := bytes.TrimPrefix(line, []byte(`data: `))
-		// 	var chunk types.ChatOverloadError
-		// 	if err := json.Unmarshal(data, &chunk); err != nil {
-		// 		result = append(result, err.Error())
-		// 	}
-		// }
+		
 	}
 	finalResult := strings.Join(result, "")
 
 	return finalResult, nil
+}
+
+
+
+func StreamChunkClient(req types.ChatArgs, chunkchan chan string) error {
+	// Marshal the payload to JSON
+	reqJsonPayload, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+
+	// Create a new HTTP request
+	request, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", bytes.NewBuffer([]byte(reqJsonPayload)))
+	if err != nil {
+		return err
+	}
+
+	// Set request headers
+	request.Header.Set("Accept", "text/event-stream")
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Cache-Control", "no-cache")
+	request.Header.Set("Connection", "keep-alive")
+	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("OPENAI_API_KEY")))
+
+	// Make the request
+	resp, err := retryRequest(httpClient, request)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == 400 {
+		// Read the response body
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+
+		chunkchan <-string(bodyBytes)
+	}
+	// Check if the response status indicates an error
+	if resp.StatusCode >= 400 {
+		var clientErr types.ErrorResponse
+		if err := json.NewDecoder(resp.Body).Decode(&clientErr); err != nil {
+			return err
+		}
+		return fmt.Errorf(clientErr.Error.Message)
+	}
+	// Use a scanner to read the streaming response
+	scanner := bufio.NewScanner(resp.Body)
+
+	for scanner.Scan() {
+
+		line := scanner.Bytes()
+
+		if bytes.HasPrefix(line, []byte(`event: message_stop)`)) {
+			break
+		}
+
+		if bytes.HasPrefix(line, []byte(`data: `)) {
+
+			data := bytes.TrimPrefix(line, []byte(`data: `))
+
+			if bytes.Contains(data, []byte(`[DONE]`)) {
+				break
+			}
+			var chunk types.ChatCompletionChunk
+			if err := json.Unmarshal(data, &chunk); err != nil {
+				return err
+			}
+			chunkchan <- chunk.Choices[0].Delta.Content
+
+		}
+
+	}
+	// Close the channel after sending all words
+	defer close(chunkchan)
+	return nil
 }

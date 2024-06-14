@@ -1,6 +1,8 @@
 package openaigo
 
 import (
+	"fmt"
+
 	"github.com/clive-alliance/openaigo/internal"
 	"github.com/clive-alliance/openaigo/types"
 )
@@ -83,4 +85,29 @@ func (params OAIChatArgs) StreamClient(prompt string, system string) (string, er
 		return "", err
 	}
 	return response, err
+}
+
+func (params OAIChatArgs) StreamRawClient(prompt string, system string) <-chan string{
+
+	if params.ChatArgs.Messages == nil {
+		params.ChatArgs.Messages = make([]types.Message, 0)
+	}
+
+	if system == "" {
+		params.ChatArgs.Messages = append(params.ChatArgs.Messages, types.Message{Role: "user", Content: prompt})
+	} else {
+		params.ChatArgs.Messages = append(params.ChatArgs.Messages, types.Message{Role: "user", Content: prompt}, types.Message{Role: "system", Content: system})
+	}
+
+	params.Stream = true
+    chunkchan := make(chan string)
+
+    go func() {
+        err := internal.StreamChunkClient(params.ChatArgs, chunkchan)
+        if err != nil {
+            fmt.Println("Error:", err)
+        }
+    }()
+
+    return chunkchan
 }
