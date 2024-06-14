@@ -1,8 +1,6 @@
 package openaigo
 
 import (
-	"fmt"
-
 	"github.com/clive-alliance/openaigo/internal"
 	"github.com/clive-alliance/openaigo/types"
 )
@@ -45,8 +43,8 @@ func ChatOAI(kwargs ...map[string]interface{}) OAIChatArgs {
 	return OAIChatArgs{args}
 }
 
-// ChatClient sends a prompt to the chat client and returns the response.
-func (args OAIChatArgs) ChatClient(prompt string, assistant string) (string, error) {
+// Chat sends a prompt to the chat client and returns the response.
+func (args OAIChatArgs) Chat(prompt string, assistant string) (string, error) {
 	if args.ChatArgs.Messages == nil {
 		args.ChatArgs.Messages = make([]types.Message, 0)
 	}
@@ -65,7 +63,8 @@ func (args OAIChatArgs) ChatClient(prompt string, assistant string) (string, err
 	return response, err
 }
 
-func (params OAIChatArgs) StreamCompleteClient(prompt string, system string) (string, error) {
+// StreamCompleteChat sends a prompt to the stream complete chat client and returns the response.
+func (params OAIChatArgs) StreamCompleteChat(prompt string, system string) (string, error) {
 
 	if params.ChatArgs.Messages == nil {
 		params.ChatArgs.Messages = make([]types.Message, 0)
@@ -79,7 +78,7 @@ func (params OAIChatArgs) StreamCompleteClient(prompt string, system string) (st
 
 	params.Stream = true
 
-	response, err := internal.StreamClient(params.ChatArgs)
+	response, err := internal.StreamCompleteClient(params.ChatArgs)
 
 	if err != nil {
 		return "", err
@@ -87,7 +86,8 @@ func (params OAIChatArgs) StreamCompleteClient(prompt string, system string) (st
 	return response, err
 }
 
-func (params OAIChatArgs) StreamClient(prompt string, system string) <-chan string{
+// StreamChat sends a prompt to the stream chat client and returns the response.
+func (params OAIChatArgs) StreamChat(prompt string, system string) <-chan string{
 
 	if params.ChatArgs.Messages == nil {
 		params.ChatArgs.Messages = make([]types.Message, 0)
@@ -103,9 +103,9 @@ func (params OAIChatArgs) StreamClient(prompt string, system string) <-chan stri
     chunkchan := make(chan string)
 
     go func() {
-        err := internal.StreamChunkClient(params.ChatArgs, chunkchan)
+        err := internal.StreamClient(params.ChatArgs, chunkchan)
         if err != nil {
-            fmt.Println("Error:", err)
+           chunkchan <- err.Error()
         }
     }()
 

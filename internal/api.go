@@ -151,7 +151,7 @@ func Client(req types.ChatArgs) (string, error) {
 	return content, nil
 }
 
-func StreamClient(req types.ChatArgs) (string, error) {
+func StreamCompleteClient(req types.ChatArgs) (string, error) {
 	// Marshal the payload to JSON
 	reqJsonPayload, err := json.Marshal(req)
 	if err != nil {
@@ -230,7 +230,7 @@ func StreamClient(req types.ChatArgs) (string, error) {
 
 
 
-func StreamChunkClient(req types.ChatArgs, chunkchan chan string) error {
+func StreamClient(req types.ChatArgs, chunkchan chan string) error {
 	// Marshal the payload to JSON
 	reqJsonPayload, err := json.Marshal(req)
 	if err != nil {
