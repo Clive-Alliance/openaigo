@@ -65,7 +65,7 @@ func (args OAIChatArgs) ChatClient(prompt string, assistant string) (string, err
 	return response, err
 }
 
-func (params OAIChatArgs) StreamClient(prompt string, system string) (string, error) {
+func (params OAIChatArgs) StreamCompleteClient(prompt string, system string) (string, error) {
 
 	if params.ChatArgs.Messages == nil {
 		params.ChatArgs.Messages = make([]types.Message, 0)
@@ -87,7 +87,7 @@ func (params OAIChatArgs) StreamClient(prompt string, system string) (string, er
 	return response, err
 }
 
-func (params OAIChatArgs) StreamRawClient(prompt string, system string) <-chan string{
+func (params OAIChatArgs) StreamClient(prompt string, system string) <-chan string{
 
 	if params.ChatArgs.Messages == nil {
 		params.ChatArgs.Messages = make([]types.Message, 0)
